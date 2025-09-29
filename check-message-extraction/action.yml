@@ -1,0 +1,72 @@
+---
+
+name: Check that all translatable message are extracted from source code
+
+description: >2
+  Given the checkout repository, run the frontend translation message extraction and
+  fail if there are changes.
+
+  Developers should ensure that localization messages are updated/extracted as part of
+  the pull request (without actually translating), and any possible compilation results
+  kept in version control must be in sync.
+
+  The action sets up node using the .nvmrc file in the repository. No checkout is
+  performed automatically - you must set this up yourself.
+
+inputs:
+  paths:
+    type: string
+    required: false
+    description: >
+      Glob path to check for message changes.
+
+      The path is fed to `git diff` and should be compatible with it.
+    default: 'i18n/{compiled,messages}'
+
+  extraction-command:
+    type: string
+    required: false
+    description: >
+      Command/executable to call for message extraction.
+
+      If additional environment configuration is necessary for your (custom) command,
+      make sure to set it up accordingly.
+    default: './bin/makemessages.sh'
+
+  compilation-command:
+    type: string
+    required: false
+    description: >
+      Command/executable to call for message compilation.
+
+      If additional environment configuration is necessary for your (custom) command,
+      make sure to set it up accordingly.
+    default: 'npm run compilemessages'
+
+runs:
+  using: composite
+
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version-file: '.nvmrc'
+        cache: npm
+    - name: Install dependencies
+      run: npm ci
+      shell: bash
+
+    - name: Extract messages and check for changes
+      run: |
+        ${{ inputs.extraction-command }}
+        ${{ inputs.compilation-command }}
+        git diff --exit-code ${{ inputs.paths }}
+      shell: bash
+
+    - name: Write failure markdown
+      if: ${{ failure() }}
+      run: |
+        first_changed_file=$(git diff --name-only --diff-filter=M ${{ inputs.paths }} | head -n 1)
+        first_lineno=$(git diff -U0 $first_changed_file | grep '^@@' | head -1 | sed -E 's/.*\+([0-9]+).*/\1/')
+        echo "::error file=$first_changed_file,line=$first_lineno,title=Outdated::There are changes detected in the i18n messages"
+        echo 'Please make sure to extract and compile messages locally commit the changes.' >> $GITHUB_STEP_SUMMARY
+      shell: bash

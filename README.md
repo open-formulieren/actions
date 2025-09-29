@@ -20,8 +20,8 @@ jobs:
       - uses: open-formulieren/actions/check-message-extraction@v1
         with:
           paths: i18n/{compiled,messages}  # the default
-          extraction_command: ./bin/makemessages.sh  # the default
-          compilation_command: npm run compilemessages  # the default
+          extraction-command: ./bin/makemessages.sh  # the default
+          compilation-command: npm run compilemessages  # the default
 ```
 
 **Check for missing translations**
@@ -43,6 +43,6 @@ jobs:
       - uses: actions/checkout@v5
       - uses: open-formulieren/actions/check-missing-translations@v1
         with:
-          messages_path: i18n/messages
+          messages-path: i18n/messages
           locales: nl  # comma-separated list of locales, matching the i18n/messages/{locale}.json path
 ```
